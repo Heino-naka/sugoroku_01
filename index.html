@@ -263,9 +263,38 @@
   .result button:hover{ filter:brightness(1.12); }
   .result .stats{ margin:2px 0 16px; padding:11px 13px; background:var(--paper); border:1px solid var(--line); border-radius:8px; font-size:.82rem; color:var(--ink); text-align:left; line-height:1.95; }
   .result .stats b{ font-weight:800; font-variant-numeric:tabular-nums; }
+  .result .theme{ font-size:.84rem; color:var(--care); background:var(--paper); border:1px dashed var(--care); border-radius:8px; padding:10px 13px; margin:0 0 14px; line-height:1.75; text-align:left; }
+  .result .best{ font-size:.78rem; color:var(--ink-soft); margin:0 0 14px; line-height:1.85; }
+  .result .best b{ color:var(--proc); font-variant-numeric:tabular-nums; }
+  .result .best .new{ color:var(--seal); font-weight:800; }
   .result .actions{ display:flex; flex-wrap:wrap; gap:8px; justify-content:center; }
   .result .actions button{ flex:1 1 40%; min-width:120px; }
   .result .btn-sub{ background:var(--paper-2); color:var(--ink); border:1px solid var(--line); }
+
+  .objective{ display:flex; flex-wrap:wrap; gap:8px 16px; justify-content:space-between; align-items:center;
+    background:var(--paper-2); border:1px solid var(--line); border-left:4px solid var(--goal); border-radius:8px;
+    padding:10px 14px; margin-bottom:10px; font-size:.9rem; }
+  .objective .obj-main b{ color:var(--ink); }
+  .objective .obj-prog{ font-size:.85rem; color:var(--ink-soft); white-space:nowrap; }
+  .objective .obj-prog b{ color:var(--proc); font-variant-numeric:tabular-nums; }
+  details.howto{ background:var(--paper-2); border:1px solid var(--line); border-radius:8px; margin-bottom:14px; overflow:hidden; }
+  details.howto summary{ cursor:pointer; list-style:none; padding:11px 14px; font-weight:700; font-size:.88rem; color:var(--proc); display:flex; align-items:center; gap:8px; }
+  details.howto summary::-webkit-details-marker{ display:none; }
+  details.howto summary::before{ content:"＋"; font-weight:800; }
+  details.howto[open] summary::before{ content:"－"; }
+  details.howto summary:hover{ background:var(--paper); }
+  .howto-body{ padding:2px 14px 14px; font-size:.83rem; line-height:1.85; color:var(--ink-soft); border-top:1px solid var(--line); }
+  .howto-body p{ margin:8px 0 0; }
+  .howto-body b{ color:var(--ink); }
+
+  .dev-panel{ position:fixed; left:10px; bottom:10px; z-index:200; width:min(320px,90vw);
+    background:rgba(20,24,22,.94); color:#d8e0d8; border:1px solid #3a463f; border-radius:10px;
+    padding:12px 13px; font-size:12px; line-height:1.7; font-family:ui-monospace,Menlo,Consolas,monospace; box-shadow:0 6px 24px rgba(0,0,0,.3); }
+  .dev-panel .dev-head{ display:flex; justify-content:space-between; align-items:center; font-weight:700; color:#9fe0b0; margin-bottom:6px; letter-spacing:.04em; }
+  .dev-panel .dev-x{ background:none; border:none; color:#9fb0a4; font-size:18px; cursor:pointer; line-height:1; padding:0 2px; }
+  .dev-panel #dev-body b{ color:#fff; }
+  .dev-panel .dev-reset{ margin-top:9px; width:100%; background:#3a463f; color:#d8e0d8; border:1px solid #516057; border-radius:6px; padding:6px; font-size:11px; cursor:pointer; font-family:inherit; }
+  .dev-panel .dev-reset:hover{ background:#4a584f; }
 
   .site-foot{ max-width:960px; margin:14px auto 0; text-align:center; font-size:.78rem; color:var(--ink-soft); line-height:1.9; }
   .site-foot b{ color:var(--ink); }
@@ -288,6 +317,22 @@
   </header>
 
   <div class="body">
+
+    <!-- 目的・あそびかた -->
+    <div class="objective">
+      <div class="obj-main">🎯 <b>目的：</b>ゴールまで進み、<b>未処理タスクを0</b>にして終える。</div>
+      <div class="obj-prog">ゴールまで残り <b id="remain-sq">15</b> マス ／ 未処理 <b id="remain-task">0</b> 件</div>
+    </div>
+    <details class="howto">
+      <summary>はじめての方へ ― あそびかた</summary>
+      <div class="howto-body">
+        <p><b>勝ち方：</b>最後のマス（ゴール）まで進み、かつ未処理タスクが0なら「認定」。手続きが残ったままゴールしても、全部片付くまで終われません。</p>
+        <p><b>2つのゲージ：</b><b>🤝 信頼度</b>が0で「指定取消」、<b>🧠 メンタル</b>が0で「バーンアウト」。どちらかが0になると失敗です。</p>
+        <p><b>進み方：</b>「サイコロを振る」→もう一度押して「止める」で進みます。通過した手続きマスの数だけ、未処理タスク（負債）が積み上がります。</p>
+        <p><b>タスク対応：</b>負債カードを選び、どう対応するかを書いて確定します。丁寧に対応するほど信頼度は回復しますが、その労力でメンタルは消耗します。放置したタスクは毎ターンじわじわ両ゲージを削るので、こまめに片付けましょう。</p>
+        <p><b>回復：</b>セルフケアマスを通ると少し、止まれば大きくメンタルが回復します。</p>
+      </div>
+    </details>
 
     <!-- ゲージ -->
     <div class="gauges">
@@ -327,6 +372,11 @@
       </div>
     </div>
 
+    <!-- ログ（現在地と未処理タスクの間） -->
+    <div class="log" id="log">
+      <div>&gt; ゲームを開始しました。新規の問い合わせが来ています。</div>
+    </div>
+
     <!-- メイン -->
     <div class="main">
       <section class="panel">
@@ -344,19 +394,15 @@
 
         <div class="treat" id="treat" style="display:none;">
           <div class="t-title" id="treat-title"></div>
-          <p>記録は何文字でも提出できます。ただし<strong>丁寧に書くほど信頼度は回復し、その労力でメンタルは消耗</strong>します。短いと信頼は伸びず、<strong>15文字未満は雑な記録</strong>として信頼が下がります。</p>
+          <p>対応の文章に文字数の制限はありません。ただし<strong>丁寧に対応するほど信頼度は回復し、その労力でメンタルは消耗</strong>します。手短だと信頼は伸びず、<strong>15文字未満は雑な対応</strong>として信頼が下がります。</p>
           <textarea id="treat-input" oninput="checkInput()" placeholder="例：保護者の訴えを傾聴し、本人の行動特性を踏まえてアセスメントを再構成。関係機関に連絡し、次回ケース会議の日程と役割分担を調整する。"></textarea>
-          <div class="count tier-bad" id="count">0 文字 ── 白紙提出：信頼ダウン</div>
-          <button class="submit" id="submit-btn" onclick="solveTask()">記録して提出する</button>
+          <div class="count tier-bad" id="count">0 文字 ── 未対応：信頼ダウン</div>
+          <button class="submit" id="submit-btn" onclick="solveTask()">この件に対応する</button>
         </div>
         <div class="idle" id="idle">サイコロを振るか、左の負債カードを選んでください。</div>
       </section>
     </div>
 
-    <!-- ログ -->
-    <div class="log" id="log">
-      <div>&gt; ゲームを開始しました。新規の問い合わせが来ています。</div>
-    </div>
   </div>
 </div>
 
@@ -365,17 +411,26 @@
   こどもに関わる大人のための思索のメンバーシップ → <a href="https://note.com/heino_naka/membership" target="_blank" rel="noopener">へいラボ</a>
 </footer>
 
+<!-- 開発者用 統計（隠し：URLに #dev、または「様式第１号」を5回タップ） -->
+<div class="dev-panel" id="dev-panel" hidden>
+  <div class="dev-head"><span>開発者用 統計</span><button class="dev-x" onclick="toggleDev()" aria-label="閉じる">×</button></div>
+  <div id="dev-body">記録なし</div>
+  <button class="dev-reset" onclick="resetStats()">この端末の統計をリセット</button>
+</div>
+
 <!-- リザルト -->
 <div class="overlay" id="overlay">
   <div class="result" id="result">
     <div class="verdict" id="verdict"></div>
     <div class="rank" id="result-rank"></div>
     <div class="note" id="result-note"></div>
+    <div class="theme" id="result-theme"></div>
     <div class="stats" id="result-stats"></div>
+    <div class="best" id="result-best"></div>
     <div class="actions">
       <button onclick="resetGame()">もう一度プレイ</button>
       <button class="btn-sub" onclick="shareResult()">結果をシェア</button>
-      <button class="btn-sub" onclick="downloadRecords()">記録をDL</button>
+      <button class="btn-sub" onclick="downloadRecords()">対応ログをDL</button>
       <button class="btn-sub" onclick="downloadImage()">画像を保存</button>
     </div>
   </div>
@@ -417,6 +472,27 @@ const SQUARES = [
     task:"【ハンコ難民】押印箇所が一つだけ空欄で、再訪問が確定", userFacing:true},
   {type:"goal",  ic:"🏁", name:"ゴール",                  desc:"サービス利用開始。お疲れさまでした。"},
 ];
+
+// 毎回少し変わるように：手続きマスのフレーバーをプールから選ぶ
+// （利用者に直接かかわる3マスは固定＝隠し回復ルールを安定させるため）
+const BONUS_TASKS = [
+  "【ハンコ出張】押印のためだけに、また窓口まで往復2時間",
+  "【前任者の置き土産】引き継ぎ書に「あとはよしなに」とだけ書かれている",
+  "【FAX文化】メール添付を送ったのに「FAXで再送を」と言われる",
+  "【二重入力】同じ内容を、紙とシステムの両方に書かされる",
+  "【締切の不意打ち】「今日中で」と言われた書類が、実は昨日締切だった",
+  "【様式改定】先週覚えた様式が、今週から新様式に差し替わっている",
+  "【電話ループ】担当部署をたらい回しにされ、最初の人に戻ってくる"
+];
+function setupVariety(){
+  SQUARES.forEach(sq=>{
+    if(sq.type!=="proc") return;
+    if(sq._task0===undefined) sq._task0=sq.task;   // 初期内容を一度だけ保存
+    sq.task = (!sq.userFacing && Math.random()<0.5)
+      ? BONUS_TASKS[Math.floor(Math.random()*BONUS_TASKS.length)]
+      : sq._task0;
+  });
+}
 
 const DICE_MAX = 6; // 1〜6 の標準ダイス。
 
@@ -570,7 +646,7 @@ function checkState(){
 function selectTask(i){
   selected=i;
   document.getElementById("treat-input").value="";
-  document.getElementById("submit-btn").disabled=false;  // 文字数に関わらず提出可
+  document.getElementById("submit-btn").disabled=false;  // 文字数に関わらず対応可
   render();
   checkInput();
 }
@@ -578,9 +654,9 @@ function selectTask(i){
 function checkInput(){
   const len=document.getElementById("treat-input").value.trim().length;
   const c=document.getElementById("count");
-  if(len>=50){ c.textContent=`${len} 文字 ── 丁寧な記録：信頼しっかり回復／メンタル消耗大`; c.className="count tier-good"; }
-  else if(len>=15){ c.textContent=`${len} 文字 ── 最低限の記録：信頼わずかに回復`; c.className="count tier-mid"; }
-  else { c.textContent=`${len} 文字 ── ${len===0?"白紙提出":"雑な記録"}：信頼ダウン`; c.className="count tier-bad"; }
+  if(len>=50){ c.textContent=`${len} 文字 ── 丁寧な対応：信頼しっかり回復／メンタル消耗大`; c.className="count tier-good"; }
+  else if(len>=15){ c.textContent=`${len} 文字 ── 最低限の対応：信頼わずかに回復`; c.className="count tier-mid"; }
+  else { c.textContent=`${len} 文字 ── ${len===0?"未対応":"雑な対応"}：信頼ダウン`; c.className="count tier-bad"; }
 }
 
 /* ── タスク処理（文字数で信頼の増減が変わり、書く労力でメンタルを消費） ── */
@@ -591,9 +667,9 @@ function solveTask(){
   const len=inputText.length;
 
   let dTrust, dMental, quality;
-  if(len>=50){ dTrust=12;  dMental=-12; quality="丁寧な記録"; }
-  else if(len>=15){ dTrust=4; dMental=-7; quality="最低限の記録"; }
-  else { dTrust=-8; dMental=-3; quality=(len===0?"白紙提出":"雑な記録"); }
+  if(len>=50){ dTrust=12;  dMental=-12; quality="丁寧な対応"; }
+  else if(len>=15){ dTrust=4; dMental=-7; quality="最低限の対応"; }
+  else { dTrust=-8; dMental=-3; quality=(len===0?"未対応":"雑な対応"); }
 
   // （隠し）利用者に直接かかわる対応を丁寧にこなすと、消耗が和らぐ。画面には明示しない。
   if(t.userFacing && len>=50){ dMental += 10; }
@@ -606,13 +682,13 @@ function solveTask(){
   selected=null;
 
   const sign=(dTrust>=0?`+${dTrust}`:`${dTrust}`);
-  log(`📝 提出：「${t.text}」を処理（${quality}）。信頼 ${sign} / メンタル ${dMental}。`, dTrust>=0?"grn":"red");
+  log(`🛠 対応：「${t.text}」を処理（${quality}）。信頼 ${sign} / メンタル ${dMental}。`, dTrust>=0?"grn":"red");
 
   render();
 
   // 処理でメンタルが尽きることもあるので、ここでも状態判定
-  if(mental<=0) return showResult(false,"バーンアウト","燃え尽き症候群で離脱…","記録に追われ、消耗しきってしまいました。");
-  if(trust<=0)  return showResult(false,"指定取消","信頼を失い、事業所が指定取消に…","雑な記録の積み重ねが、信頼を削りました。");
+  if(mental<=0) return showResult(false,"バーンアウト","燃え尽き症候群で離脱…","対応に追われ、消耗しきってしまいました。");
+  if(trust<=0)  return showResult(false,"指定取消","信頼を失い、事業所が指定取消に…","雑な対応の積み重ねが、信頼を削りました。");
   if(pos>=SQUARES.length-1 && tasks.length===0){
     showResult(true,"認定","残業上等・一級相談員","ゴール後の残務もすべて完遂。頭が下がります。");
   }
@@ -625,6 +701,8 @@ function render(){
   // 現在地
   document.getElementById("here-name").textContent = `マス${pos}・${SQUARES[pos].name}`;
   document.getElementById("here-desc").innerHTML = SQUARES[pos].desc + (hereNote ? ` <span style="color:var(--ok);font-weight:700;">🧠 ${hereNote}</span>` : "");
+  document.getElementById("remain-sq").textContent = (SQUARES.length-1) - pos;
+  document.getElementById("remain-task").textContent = tasks.length;
 
   // ゲージ
   setGauge("trust", trust);
@@ -684,36 +762,96 @@ function log(msg, cls){
 
 /* ── リザルト画面 ── */
 function showResult(win, verdict, rank, note){
-  lastResult={win:!!win, verdict, rank, note};
-  const ov=document.getElementById("overlay");
+  win=!!win;
+  lastResult={win, verdict, rank, note};
   document.getElementById("result").className = "result"+(win?" win":"");
   document.getElementById("verdict").textContent=verdict;
   document.getElementById("result-rank").textContent=rank;
   document.getElementById("result-note").textContent=note;
+  document.getElementById("result-theme").textContent = win
+    ? "理不尽は、たぶん明日も来ます。それでも、目の前の人に丁寧に向き合った時間は、ちゃんとあなたを支えていました。"
+    : "燃え尽きる前に、立ち止まっていい。あなたの丁寧さは、見えないところで誰かの支えになっています。";
   document.getElementById("result-stats").innerHTML =
     `かかったターン数：<b>${turn}</b>　／　未処理タスク：<b>${tasks.length}</b>件<br>`+
     `最終 信頼度：<b>${trust}</b>　／　メンタル：<b>${mental}</b><br>`+
-    `処理した記録：<b>${records.length}</b>件`;
-  ov.classList.add("show");
+    `対応した件数：<b>${records.length}</b>件`;
+
+  // 自己ベスト（この端末内にのみ保存）
+  const st=loadStats();
+  st.plays=(st.plays||0)+1;
+  let flash="";
+  if(win){
+    st.wins=(st.wins||0)+1;
+    const score=trust+mental;
+    const newScore=(st.bestScore===undefined||score>st.bestScore);
+    const newTurns=(st.bestTurns===undefined||turn<st.bestTurns);
+    if(newScore) st.bestScore=score;
+    if(newTurns) st.bestTurns=turn;
+    if(newScore||newTurns) flash=` <span class="new">🎉 自己ベスト更新！</span>`;
+  }
+  saveStats(st);
+  let best=`プレイ <b>${st.plays}</b>回・認定 <b>${st.wins||0}</b>回`;
+  if(st.bestScore!==undefined) best+=`<br>自己ベスト：信頼+メンタル <b>${st.bestScore}</b>（最短 <b>${st.bestTurns}</b>ターン）`;
+  document.getElementById("result-best").innerHTML = best+flash;
+
+  recordHistory(win, turn, verdict, trust, mental);
+  document.getElementById("overlay").classList.add("show");
+}
+function loadStats(){ try{ return JSON.parse(localStorage.getItem("rifujin_best")||"{}")||{}; }catch(e){ return {}; } }
+function saveStats(s){ try{ localStorage.setItem("rifujin_best", JSON.stringify(s)); }catch(e){} }
+
+/* ── 開発者用 統計（端末内のみ・隠し） ── */
+let devVisible=false;
+function recordHistory(win, turns, verdict, tr, me){
+  try{
+    let h=JSON.parse(localStorage.getItem("rifujin_log")||"[]"); if(!Array.isArray(h)) h=[];
+    h.push({win:!!win, turns, verdict, tr, me, ts:Date.now()});
+    if(h.length>50) h=h.slice(-50);
+    localStorage.setItem("rifujin_log", JSON.stringify(h));
+  }catch(e){}
+  if(devVisible) renderDev();
+}
+function toggleDev(){ devVisible=!devVisible; const p=document.getElementById("dev-panel"); if(p) p.hidden=!devVisible; if(devVisible) renderDev(); }
+function renderDev(){
+  const body=document.getElementById("dev-body"); if(!body) return;
+  let h=[]; try{ h=JSON.parse(localStorage.getItem("rifujin_log")||"[]")||[]; }catch(e){}
+  const recent=h.slice(-20); const n=recent.length;
+  if(n===0){ body.innerHTML="記録なし（プレイすると貯まります）"; return; }
+  const wins=recent.filter(r=>r.win).length;
+  const winRate=Math.round(wins/n*100);
+  const wt=recent.filter(r=>r.win).map(r=>r.turns);
+  const avgWin=wt.length ? (wt.reduce((a,b)=>a+b,0)/wt.length).toFixed(1) : "—";
+  const avgAll=(recent.reduce((a,b)=>a+b.turns,0)/n).toFixed(1);
+  const cause={}; recent.forEach(r=>{ const k=r.win?"認定":(r.verdict||"敗北"); cause[k]=(cause[k]||0)+1; });
+  const causeStr=Object.keys(cause).map(k=>k+" "+cause[k]).join("／");
+  body.innerHTML =
+    `直近 <b>${n}</b> 戦　勝率 <b>${winRate}%</b>（${wins}/${n}）<br>`+
+    `平均ターン　勝利時 <b>${avgWin}</b> ／ 全体 <b>${avgAll}</b><br>`+
+    `内訳：${causeStr}`;
+}
+function resetStats(){
+  if(!confirm("この端末のプレイ統計（履歴・自己ベスト）を消去します。よろしいですか？")) return;
+  try{ localStorage.removeItem("rifujin_log"); localStorage.removeItem("rifujin_best"); }catch(e){}
+  renderDev();
 }
 
-/* ── 記録のダウンロード（入力内容の一覧をテキスト出力） ── */
+/* ── 対応ログのダウンロード（入力内容の一覧をテキスト出力） ── */
 function downloadRecords(){
   const v=lastResult||{};
   let txt="障害児支援・理不尽すごろく（相談支援専門員編）\n";
-  txt+="プレイ記録　"+new Date().toLocaleString("ja-JP")+"\n";
+  txt+="対応ログ　"+new Date().toLocaleString("ja-JP")+"\n";
   txt+="判定："+(v.verdict||"-")+(v.rank?("／"+v.rank):"")+"\n";
   txt+="ターン数 "+turn+" ／ 未処理 "+tasks.length+"件 ／ 信頼度 "+trust+" ／ メンタル "+mental+"\n";
   txt+="==============================\n\n";
-  if(records.length===0){ txt+="（記録の入力はありませんでした）\n"; }
+  if(records.length===0){ txt+="（対応の入力はありませんでした）\n"; }
   records.forEach(r=>{
-    txt+="■ 記録"+r.no+"（"+r.quality+"・"+r.len+"字）\n";
+    txt+="■ 対応"+r.no+"（"+r.quality+"・"+r.len+"字）\n";
     txt+="課題："+r.task+"\n";
-    txt+="内容：\n"+(r.input||"（白紙）")+"\n\n";
+    txt+="内容：\n"+(r.input||"（未対応）")+"\n\n";
   });
   const blob=new Blob([txt],{type:"text/plain;charset=utf-8"});
   const url=URL.createObjectURL(blob);
-  const a=document.createElement("a"); a.href=url; a.download="理不尽すごろく_記録.txt";
+  const a=document.createElement("a"); a.href=url; a.download="理不尽すごろく_対応ログ.txt";
   document.body.appendChild(a); a.click(); document.body.removeChild(a);
   URL.revokeObjectURL(url);
 }
@@ -781,11 +919,22 @@ function resetGame(){
   document.getElementById("dice").textContent="";
   document.getElementById("dice").classList.remove("rolling");
   document.getElementById("log").innerHTML="<div>&gt; リセットしました。新しい事例が割り振られました。</div>";
+  setupVariety();
   render();
 }
 
 /* 起動 */
+setupVariety();
 render();
+
+/* 開発者用 統計の表示トリガー（URLに #dev、または「様式第１号」を5回タップ） */
+(function(){
+  if(/dev|stats/i.test(location.hash)){ devVisible=true; const p=document.getElementById("dev-panel"); if(p){ p.hidden=false; renderDev(); } }
+  const stamp=document.querySelector(".doc-stamp");
+  if(stamp){ let taps=0,t=null;
+    stamp.addEventListener("click",()=>{ taps++; clearTimeout(t); t=setTimeout(()=>taps=0,1200); if(taps>=5){ taps=0; toggleDev(); } });
+  }
+})();
 </script>
 
 </body>
