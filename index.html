@@ -1,0 +1,509 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>障害児支援・理不尽すごろく（プロトタイプ）</title>
+    <style>
+        :root {
+            --primary: #2c3e50;
+            --danger: #e74c3c;
+            --warning: #f39c12;
+            --success: #2ecc71;
+            --bg: #ecf0f1;
+        }
+        body {
+            font-family: 'Helvetica Neue', Arial, 'Hiragino Kaku Gothic ProN', sans-serif;
+            background-color: var(--bg);
+            margin: 0;
+            padding: 20px;
+            color: #333;
+        }
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        }
+        h1 {
+            text-align: center;
+            color: var(--primary);
+            margin-bottom: 5px;
+        }
+        .subtitle {
+            text-align: center;
+            color: #7f8c8d;
+            margin-bottom: 20px;
+        }
+        /* ステータスエリア */
+        .status-container {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+        .status-box {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 8px;
+            border-left: 5px solid var(--primary);
+        }
+        .status-bar {
+            background: #e0e0e0;
+            height: 20px;
+            border-radius: 10px;
+            overflow: hidden;
+            margin-top: 5px;
+        }
+        .status-fill {
+            height: 100%;
+            transition: width 0.3s ease;
+        }
+        .trust .status-fill { background-color: var(--success); }
+        .mental .status-fill { background-color: var(--danger); }
+
+        /* すごろくエリア */
+        .board {
+            display: flex;
+            justify-content: space-between;
+            background: #f1f2f6;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            position: relative;
+            overflow-x: auto;
+        }
+        .square {
+            flex: 1;
+            min-width: 100px;
+            text-align: center;
+            padding: 15px 5px;
+            margin: 0 5px;
+            background: white;
+            border: 2px solid #bdc3c7;
+            border-radius: 5px;
+            font-size: 0.85rem;
+            font-weight: bold;
+            position: relative;
+            transition: all 0.3s;
+        }
+        .square.active {
+            border-color: var(--primary);
+            background: #dff9fb;
+            box-shadow: 0 0 10px rgba(44, 62, 80, 0.3);
+        }
+        .square.passed {
+            background: #dfe4ea;
+            border-color: #95a5a6;
+        }
+        .piece {
+            position: absolute;
+            top: -15px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: #9b59b6;
+            color: white;
+            padding: 2px 8px;
+            border-radius: 10px;
+            font-size: 0.75rem;
+            animation: bounce 0.5s infinite alternate;
+        }
+        @keyframes bounce {
+            from { top: -15px; } to { top: -22px; }
+        }
+
+        /* メインコンテンツ（2カラム） */
+        .main-content {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+
+        /* タスク一覧（負債スタック） */
+        .task-section, .action-section {
+            background: #fdfefe;
+            border: 1px solid #e2e8f0;
+            padding: 15px;
+            border-radius: 8px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.02);
+        }
+        .task-list {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+        .task-item {
+            background: #fff5f5;
+            border: 1px solid #feb2b2;
+            color: #c53030;
+            padding: 10px;
+            margin-bottom: 8px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            transition: transform 0.2s;
+        }
+        .task-item:hover {
+            transform: scale(1.02);
+        }
+        .task-item.selected {
+            border-color: var(--warning);
+            background: #fffaf0;
+            color: #dd6b20;
+            box-shadow: 0 0 5px rgba(243, 156, 18, 0.5);
+        }
+
+        /* アクションエリア */
+        .action-box {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+        button {
+            background: var(--primary);
+            color: white;
+            border: none;
+            padding: 12px;
+            border-radius: 5px;
+            font-size: 1rem;
+            font-weight: bold;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        button:hover { background: #34495e; }
+        button:disabled { background: #ccc; cursor: not-allowed; }
+        .dice-result {
+            font-size: 1.5rem;
+            font-weight: bold;
+            text-align: center;
+            color: var(--danger);
+            margin: 5px 0;
+            min-height: 36px;
+        }
+        textarea {
+            width: 100%;
+            height: 80px;
+            box-sizing: border-box;
+            padding: 10px;
+            border: 1px solid #cbd5e0;
+            border-radius: 5px;
+            resize: none;
+        }
+        .char-count {
+            text-align: right;
+            font-size: 0.8rem;
+            color: #718096;
+            margin-top: -10px;
+        }
+
+        /* ログ通知 */
+        .log-box {
+            margin-top: 20px;
+            background: #2d3748;
+            color: #a0aec0;
+            padding: 12px;
+            border-radius: 5px;
+            font-family: monospace;
+            font-size: 0.85rem;
+            max-height: 100px;
+            overflow-y: auto;
+        }
+        .log-box span { color: #fff; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>障害児支援・理不尽すごろく</h1>
+    <div class="subtitle">〜通過したマスの分だけタスク（負債）が溜まる、相談支援専門員編〜</div>
+
+    <div class="status-container">
+        <div class="status-box trust">
+            <strong>信頼ゲージ: <span id="trust-txt">100</span>%</strong> (トラブル放置で低下)
+            <div class="status-bar"><div id="trust-bar" class="status-fill" style="width: 100%;"></div></div>
+        </div>
+        <div class="status-box mental">
+            <strong>メンタルゲージ: <span id="mental-txt">100</span>%</strong> (0でバーンアウト)
+            <div class="status-bar"><div id="mental-bar" class="status-fill" style="width: 100%;"></div></div>
+        </div>
+    </div>
+
+    <div class="board" id="board">
+        </div>
+
+    <div class="main-content">
+        <div class="task-section">
+            <h3>⚠️ 未処理のタスク（負債スタック）</h3>
+            <p style="font-size:0.8rem; color:#718096;">※クリックして処理するタスクを選択してください</p>
+            <ul class="task-list" id="task-list">
+                </ul>
+        </div>
+
+        <div class="action-section">
+            <h3>🛠️ アクション</h3>
+            <div class="action-box">
+                <button id="dice-btn" onclick="rollDice()">サイコロを振る</button>
+                <div class="dice-result" id="dice-res"></div>
+                
+                <hr style="border:0; border-top:1px solid #eee; width:100%;">
+                
+                <div id="treatment-area" style="display: none;">
+                    <strong id="selected-task-title" style="color:var(--warning);"></strong>
+                    <p style="font-size:0.8rem; margin:5px 0;">対応策や見立てを<strong>50文字以上</strong>で入力して処理してください（書類作成のリアルな重み）。</p>
+                    <textarea id="task-input" oninput="checkInput()" placeholder="例：保護者の話を傾聴し、本人の行動特性に基づいたアセスメントシートを再構築。関係機関に電話連絡し、次回のケース会議の段取りを調整する。"></textarea>
+                    <div class="char-count" id="char-cnt">0 / 50 文字</div>
+                    <button id="solve-btn" onclick="solveTask()" disabled style="width:100%; margin-top:5px; background:var(--success);">タスクを処理・書類提出</button>
+                </div>
+                <div id="no-task-msg" style="text-align: center; color: #a0aec0; padding: 20px 0;">
+                    処理するタスクを選択するか、サイコロを振ってください。
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="log-box" id="log-box">
+        <div>ゲームを開始しました。新規の問い合わせが来ています。</div>
+    </div>
+</div>
+
+<script>
+    // マス目のデータ（相談支援専門員の手順）
+    const squaresData = [
+        { id: 0, name: "スタート (新規問い合わせ)" },
+        { id: 1, name: "1. 電話ヒアリング (情報収集)" },
+        { id: 2, name: "2. インテーク面接 (初回面談)" },
+        { id: 3, name: "3. アセスメント (課題分析)" },
+        { id: 4, name: "4. サービス利用計画案 作成" },
+        { id: 5, name: "ゴール (契約・利用開始)" }
+    ];
+
+    // 各マスを「通過」したときに発生する理不尽タスク
+    const taskPool = {
+        1: "【電話不備】ヒアリング時に保護者が激昂、要件が聞き取れず宿題に",
+        2: "【面接炎上】インテークで信頼関係が構築できず、保護者からクレーム",
+        3: "【見立て違い】アセスメント不足を他の専門職から突っ込まれ、差し戻し",
+        4: "【計画不備】計画案の文言に行政からダメ出し。修正作業が発生"
+    };
+
+    // ゲーム状態
+    let currentPos = 0;
+    let trust = 100;
+    let mental = 100;
+    let activeTasks = []; // 現在溜まっているタスク {id: マス番号, text: 内容}
+    let selectedTaskIndex = null;
+    let turnCount = 0;
+
+    // 初期化
+    function initBoard() {
+        const boardEl = document.getElementById('board');
+        boardEl.innerHTML = '';
+        squaresData.forEach((sq, idx) => {
+            const div = document.createElement('div');
+            div.className = `square ${idx === 0 ? 'active' : ''}`;
+            div.id = `sq-${idx}`;
+            div.innerHTML = sq.name;
+            if (idx === currentPos) {
+                div.innerHTML += '<div class="piece">相談員</div>';
+            }
+            boardEl.appendChild(div);
+        });
+    }
+
+    // サイコロを振る
+    function rollDice() {
+        if (activeTasks.length >= 5) {
+            addLog("⚠️ タスクが溜まりすぎてパニック！サイコロを振る余裕がありません。");
+            return;
+        }
+
+        document.getElementById('dice-btn').disabled = true;
+        let count = 0;
+        let diceNum = 0;
+        
+        // サイコロの回転演出（簡易）
+        const interval = setInterval(() => {
+            diceNum = Math.floor(Math.random() * 3) + 1; // プロトタイプ用に1〜3の目
+            document.getElementById('dice-res').innerText = `🎲 ［ ${diceNum} ］`;
+            count++;
+            if (count > 10) {
+                clearInterval(interval);
+                movePiece(diceNum);
+            }
+        }, 50);
+    }
+
+    // コマを進める（ここがコアロジック：通過したマスもすべてタスク化）
+    function movePiece(steps) {
+        turnCount++;
+        let startPos = currentPos;
+        currentPos = Math.min(currentPos + steps, squaresData.length - 1);
+        
+        addLog(`サイコロの目 <span>${steps}</span> が出た！ ${startPos} から ${currentPos} へ進みます。`);
+
+        // 通過したマスのタスクをすべて累積
+        for (let i = startPos + 1; i <= currentPos; i++) {
+            // ゴール（5）以外で、まだタスクプールにあればスタックに送る
+            if (taskPool[i]) {
+                activeTasks.push({ id: i, text: taskPool[i] });
+                addLog(`❌ 通過ペナルティ：${squaresData[i].name} を十分に処理できず、未処理タスクにスタック！`);
+            }
+        }
+
+        // 桃鉄風理不尽イベント：一定ターンで「実地検査」の予告
+        if (turnCount === 3) {
+            addLog("🚨 【警告】行政から『実地検査（実地指導）』の通知が届いた！未処理タスクがあると大炎上します！");
+            trust = Math.max(0, trust - 20);
+        }
+
+        updateUI();
+        document.getElementById('dice-btn').disabled = false;
+
+        // ゴール判定
+        if (currentPos === squaresData.length - 1) {
+            if (activeTasks.length === 0) {
+                alert(`🎉 すごい！すべての負債を処理して無事に利用開始（ゴール）しました！\n【評価】あなたの支援者ランク：『お釈迦様級相談員』`);
+                resetGame();
+            } else {
+                addLog("🏁 ゴールマスに到達しましたが、未処理の書類・タスクが残っています！すべて片付けるまで業務は終わりません。");
+            }
+        }
+    }
+
+    // UIの更新
+    function updateUI() {
+        // マスの見た目更新
+        for (let i = 0; i < squaresData.length; i++) {
+            const sq = document.getElementById(`sq-${i}`);
+            sq.className = 'square';
+            if (i < currentPos) sq.classList.add('passed');
+            if (i === currentPos) {
+                sq.classList.add('active');
+                // 駒の再配置
+                if (!sq.querySelector('.piece')) {
+                    sq.innerHTML = squaresData[i].name + '<div class="piece">相談員</div>';
+                }
+            } else {
+                sq.innerHTML = squaresData[i].name;
+            }
+        }
+
+        // 毎ターンの未処理タスクによるダメージ（エンドフェーズ処理）
+        if (activeTasks.length > 0) {
+            trust = Math.max(0, trust - (activeTasks.length * 2));
+            mental = Math.max(0, mental - (activeTasks.length * 3));
+        }
+
+        // ステータス反映
+        document.getElementById('trust-txt').innerText = trust;
+        document.getElementById('trust-bar').style.width = `${trust}%`;
+        document.getElementById('mental-txt').innerText = mental;
+        document.getElementById('mental-bar').style.width = `${mental}%`;
+
+        // ゲームオーバー判定
+        if (mental <= 0) {
+            alert("🤯 メンタルが0になりました。燃え尽き症候群（バーンアウト）です。ゲームオーバー。\n現実ではこうなる前に有給を取りましょう。");
+            resetGame();
+            return;
+        }
+        if (trust <= 0) {
+            alert("📉 信頼度が0になりました。行政指導が入り、事業所の指定取り消しです。ゲームオーバー。");
+            resetGame();
+            return;
+        }
+
+        // タスクリストの描画
+        const listEl = document.getElementById('task-list');
+        listEl.innerHTML = '';
+        activeTasks.forEach((task, idx) => {
+            const li = document.createElement('li');
+            li.className = `task-item ${selectedTaskIndex === idx ? 'selected' : ''}`;
+            li.innerText = task.text;
+            li.onclick = () => selectTask(idx);
+            listEl.appendChild(li);
+        });
+
+        // アクションエリアの表示切り替え
+        if (selectedTaskIndex !== null && activeTasks[selectedTaskIndex]) {
+            document.getElementById('treatment-area').style.display = 'block';
+            document.getElementById('no-task-msg').style.display = 'none';
+            document.getElementById('selected-task-title').innerText = activeTasks[selectedTaskIndex].text;
+        } else {
+            document.getElementById('treatment-area').style.display = 'none';
+            document.getElementById('no-task-msg').style.display = 'block';
+            selectedTaskIndex = null;
+        }
+    }
+
+    // タスクの選択
+    function selectTask(index) {
+        selectedTaskIndex = index;
+        document.getElementById('task-input').value = '';
+        document.getElementById('char-cnt').innerText = "0 / 50 文字";
+        document.getElementById('solve-btn').disabled = true;
+        updateUI();
+    }
+
+    // 文字入力チェック
+    function checkInput() {
+        const input = document.getElementById('task-input').value;
+        const len = input.length;
+        document.getElementById('char-cnt').innerText = `${len} / 50 文字`;
+        document.getElementById('solve-btn').disabled = len < 50;
+    }
+
+    // タスクの処理（書類提出）
+    function solveTask() {
+        if (selectedTaskIndex === null) return;
+        
+        const solvedTask = activeTasks[selectedTaskIndex];
+        addLog(`✅ 書類提出：${solvedTask.text} に対する支援記録を提出。タスクを消去しました！`);
+        
+        // タスク削除
+        activeTasks.splice(selectedTaskIndex, 1);
+        selectedTaskIndex = null;
+        
+        // 報酬：ちょっと回復
+        mental = Math.min(100, mental + 15);
+        trust = Math.min(100, trust + 10);
+        
+        updateUI();
+
+        // ゴール後に残ったタスクを全部消した時の救済ゴール判定
+        if (currentPos === squaresData.length - 1 && activeTasks.length === 0) {
+            alert(`🎉 残務処理完了！無事に利用開始（ゴール）しました！\n【評価】あなたの支援者ランク：『残業お疲れ様・一級相談員』`);
+            resetGame();
+        }
+    }
+
+    // ログ追加
+    function addLog(msg) {
+        const box = document.getElementById('log-box');
+        const div = document.createElement('div');
+        div.innerHTML = `> ${msg}`;
+        box.appendChild(div);
+        box.scrollTop = box.scrollHeight;
+    }
+
+    // ゲームリセット
+    function resetGame() {
+        currentPos = 0;
+        trust = 100;
+        mental = 100;
+        activeTasks = [];
+        selectedTaskIndex = null;
+        turnCount = 0;
+        document.getElementById('dice-res').innerText = '';
+        document.getElementById('log-box').innerHTML = '<div>ゲームをリセットしました。新しい事例が割り振られました。</div>';
+        initBoard();
+        updateUI();
+    }
+
+    // 起動
+    initBoard();
+    updateUI();
+</script>
+
+</body>
+</html>
