@@ -196,9 +196,9 @@
   .actions .roll:hover{ filter:brightness(1.08); }
   .actions .roll:disabled{ background:#b9b3a4; cursor:not-allowed; }
   .dice{
-    text-align:center; font-size:1.7rem; font-weight:800;
-    min-height:42px; margin:10px 0 4px; color:var(--ink);
-    font-variant-numeric:tabular-nums;
+    text-align:center; font-size:2.9rem; font-weight:800;
+    min-height:68px; margin:12px 0 4px; color:var(--ink);
+    font-variant-numeric:tabular-nums; letter-spacing:.02em;
   }
   .dice.rolling{ animation:shake .12s linear infinite; color:var(--proc); }
   @keyframes shake{ 0%,100%{transform:translateX(0);} 25%{transform:translateX(-3px);} 75%{transform:translateX(3px);} }
@@ -260,6 +260,10 @@
     background:var(--ink); color:#fff; border:none; border-radius:7px;
     padding:11px 18px; font-weight:700; cursor:pointer; font-family:inherit; font-size:.92rem;
   }
+
+  .site-foot{ max-width:960px; margin:14px auto 0; text-align:center; font-size:.78rem; color:var(--ink-soft); line-height:1.9; }
+  .site-foot b{ color:var(--ink); }
+  .site-foot a{ color:var(--proc); font-weight:700; text-decoration:none; border-bottom:1px solid rgba(44,95,124,.35); }
 
   :focus-visible{ outline:3px solid var(--proc); outline-offset:2px; }
   @media(prefers-reduced-motion:reduce){
@@ -328,7 +332,7 @@
 
       <section class="panel actions">
         <h2>🎲 アクション</h2>
-        <button class="roll" id="roll-btn" onclick="rollDice()">サイコロを振って進む</button>
+        <button class="roll" id="roll-btn" onclick="diceAction()">サイコロを振って進む</button>
         <div class="dice" id="dice"></div>
         <hr class="divider">
 
@@ -350,6 +354,11 @@
   </div>
 </div>
 
+<footer class="site-foot">
+  作った人：<b>へいなか（公認心理師・元法務教官）</b><br>
+  こどもに関わる大人のための思索のメンバーシップ → <a href="https://note.com/heino_naka/membership" target="_blank" rel="noopener">へいラボ</a>
+</footer>
+
 <!-- リザルト -->
 <div class="overlay" id="overlay">
   <div class="result" id="result">
@@ -369,7 +378,7 @@ const SQUARES = [
   {type:"proc",  ic:"📞", name:"電話受付・一次対応",      desc:"まずは電話で要件を聞き取ります。",
     task:"【折り返し地獄】留守電に要件だけ。かけ直すと今度は繋がらない"},
   {type:"proc",  ic:"🪑", name:"インテーク面接",          desc:"初回面談で困りごとを把握します。",
-    task:"【後出し情報】面談後に『そういえば兄も…』と重大な事実が判明"},
+    task:"【後出し情報】面談後に『そういえば兄も…』と重大な事実が判明", userFacing:true},
   {type:"seal",  ic:"💢", name:"当日ドタキャン",          desc:"保護者が面談を当日キャンセル。半日が消えました。",
     hit:{mental:14}},
   {type:"proc",  ic:"🗂️", name:"基本情報・生育歴の整理",  desc:"記録を時系列で突き合わせます。",
@@ -379,11 +388,11 @@ const SQUARES = [
   {type:"seal",  ic:"💢", name:"連携先が音信不通",        desc:"病院からの折り返しが一週間来ません。",
     hit:{trust:12}},
   {type:"care",  ic:"☕", name:"ひと息つけた",            desc:"コンビニのコーヒーで少し回復。止まれてラッキー。",
-    heal:{mental:18}},
+    heal:{mental:22}},
   {type:"proc",  ic:"📅", name:"担当者会議の日程調整",     desc:"関係者の予定を合わせます。",
     task:"【日程パズル】6者の予定が1ミリも噛み合わない"},
   {type:"proc",  ic:"📝", name:"利用計画案の作成",         desc:"サービス等利用計画案を作成します。",
-    task:"【文言地獄】『本人の意向』欄を何度書いても“薄い”と返される"},
+    task:"【文言地獄】『本人の意向』欄を何度書いても“薄い”と返される", userFacing:true},
   {type:"seal",  ic:"💢", name:"行政から大量の赤入れ",     desc:"計画案が真っ赤になって戻ってきました。",
     hit:{trust:10, mental:10}},
   {type:"proc",  ic:"🏛️", name:"支給申請・行政手続き",     desc:"窓口で申請書類を提出します。",
@@ -391,18 +400,20 @@ const SQUARES = [
   {type:"proc",  ic:"📜", name:"支給決定・受給者証の確認", desc:"決定内容を確認します。",
     task:"【区分ズレ】想定と支給量が違い、計画を組み直す羽目に"},
   {type:"care",  ic:"☕", name:"同僚のねぎらい",          desc:"先輩が『お疲れさま』と声をかけてくれました。",
-    heal:{mental:16}},
+    heal:{mental:20}},
   {type:"proc",  ic:"🖋️", name:"契約・重要事項説明",       desc:"契約手続きを進めます。",
-    task:"【ハンコ難民】押印箇所が一つだけ空欄で、再訪問が確定"},
+    task:"【ハンコ難民】押印箇所が一つだけ空欄で、再訪問が確定", userFacing:true},
   {type:"goal",  ic:"🏁", name:"ゴール",                  desc:"サービス利用開始。お疲れさまでした。"},
 ];
 
-const DICE_MAX = 3; // プロトタイプ用。手応えを上げたいなら 4〜6 に。
+const DICE_MAX = 6; // 1〜6 の標準ダイス。
 
 let pos=0, trust=100, mental=100, turn=0;
 let tasks=[];           // {sqIndex, text}
 let selected=null;
 let busy=false;
+let spinning=false, spinIv=null, pendingRoll=0;
+let hereNote="";
 
 /* ── 描画：ボード ── */
 function renderBoard(){
@@ -424,36 +435,54 @@ function renderBoard(){
   });
 }
 
-/* ── サイコロ ── */
-function rollDice(){
-  if(busy) return;
-  if(tasks.length>=6){
-    log("⚠️ 負債が溜まりすぎてパニック。まず処理を。", "red");
-    return;
-  }
-  if(pos>=SQUARES.length-1) return;
-
-  busy=true;
+/* ── サイコロ（2タップ：振る→止める。出目は「振る」でRNG確定、「止める」は演出を止めるだけ＝等確率） ── */
+function diceAction(){
   const btn=document.getElementById("roll-btn");
   const dice=document.getElementById("dice");
-  btn.disabled=true; dice.classList.add("rolling");
 
-  let n=0, ticks=0;
-  const iv=setInterval(()=>{
-    n=Math.floor(Math.random()*DICE_MAX)+1;
-    dice.textContent="🎲 "+n;
-    if(++ticks>9){
-      clearInterval(iv);
-      dice.classList.remove("rolling");
-      move(n);
-      busy=false;
+  if(!spinning){
+    // 1タップ目：振る
+    if(busy) return;
+    if(tasks.length>=6){
+      log("⚠️ 負債が溜まりすぎてパニック。まず処理を。", "red");
+      return;
     }
-  },60);
+    if(pos>=SQUARES.length-1) return;
+
+    // 裏イベント：放置タスク5件以上で振ると「利用者からのクレーム」（信頼度が大幅減）
+    if(tasks.length>=5){
+      trust=clamp(trust-25);
+      log('🚨【利用者からのクレーム】放置された案件に苦情が入りました。信頼度が大きく低下。', 'red');
+      render();
+      if(trust<=0){ return showResult(false,"指定取消","クレームが重なり、信頼を失いました…","放置した書類は、いつか必ず跳ね返ってきます。"); }
+    }
+
+    // 出目はこの瞬間にRNGで確定（公平）。以降の表示は演出のみ。
+    pendingRoll = Math.floor(Math.random()*DICE_MAX)+1;
+    spinning=true;
+    btn.textContent="止める";
+    dice.classList.add("rolling");
+    spinIv=setInterval(()=>{
+      const face=Math.floor(Math.random()*DICE_MAX)+1; // 表示用のダミー
+      dice.textContent="🎲 "+face;
+    },80);
+
+  }else{
+    // 2タップ目：止める（確定済みの出目に着地）
+    clearInterval(spinIv); spinIv=null;
+    spinning=false;
+    dice.classList.remove("rolling");
+    dice.textContent="🎲 "+pendingRoll;
+    btn.textContent="サイコロを振って進む";
+    busy=true; btn.disabled=true;
+    setTimeout(()=>{ move(pendingRoll); busy=false; }, 250);
+  }
 }
 
 /* ── コア：通過したマスをすべて処理 ── */
 function move(steps){
   turn++;
+  hereNote="";
   const from=pos;
   pos=Math.min(pos+steps, SQUARES.length-1);
   log(`サイコロ <span class="hi">${steps}</span> ── マス${from} → マス${pos} へ。`);
@@ -461,7 +490,7 @@ function move(steps){
   for(let i=from+1;i<=pos;i++){
     const sq=SQUARES[i];
     if(sq.type==="proc"){
-      tasks.push({sqIndex:i, text:sq.task});
+      tasks.push({sqIndex:i, text:sq.task, userFacing:!!sq.userFacing});
       log(`❌ 通過ペナルティ：「${sq.name}」を処理しきれず負債化。`, "red");
     }else if(sq.type==="seal"){
       if(sq.hit.trust) trust=clamp(trust-sq.hit.trust);
@@ -469,8 +498,10 @@ function move(steps){
       log(`💢 理不尽発生：「${sq.name}」。`, "red");
     }else if(sq.type==="care"){
       if(i===pos){ // 止まったときだけ回復
-        if(sq.heal.mental) mental=clamp(mental+sq.heal.mental);
-        log(`☕ 「${sq.name}」で止まれた。メンタル回復。`, "grn");
+        let gained=0;
+        if(sq.heal.mental){ const before=mental; mental=clamp(mental+sq.heal.mental); gained=mental-before; }
+        hereNote=`メンタルが ${gained} 回復した！`;
+        log(`☕ 「${sq.name}」で止まれた。メンタルが ${gained} 回復。`, "grn");
       }else{
         log(`☕ 「${sq.name}」を素通り。休む間もなし…`, "red");
       }
@@ -545,6 +576,9 @@ function solveTask(){
   else if(len>=15){ dTrust=4; dMental=-7; quality="最低限の記録"; }
   else { dTrust=-8; dMental=-3; quality=(len===0?"白紙提出":"雑な記録"); }
 
+  // （隠し）利用者に直接かかわる対応を丁寧にこなすと、消耗が和らぐ。画面には明示しない。
+  if(t.userFacing && len>=50){ dMental += 10; }
+
   trust=clamp(trust+dTrust);
   mental=clamp(mental+dMental);
   tasks.splice(selected,1);
@@ -569,7 +603,7 @@ function render(){
 
   // 現在地
   document.getElementById("here-name").textContent = `マス${pos}・${SQUARES[pos].name}`;
-  document.getElementById("here-desc").textContent = SQUARES[pos].desc;
+  document.getElementById("here-desc").innerHTML = SQUARES[pos].desc + (hereNote ? ` <span style="color:var(--ok);font-weight:700;">🧠 ${hereNote}</span>` : "");
 
   // ゲージ
   setGauge("trust", trust);
@@ -640,6 +674,8 @@ function showResult(win, verdict, rank, note){
 /* ── リセット ── */
 function resetGame(){
   pos=0; trust=100; mental=100; turn=0; tasks=[]; selected=null; busy=false;
+  if(spinIv){ clearInterval(spinIv); spinIv=null; } spinning=false; pendingRoll=0; hereNote="";
+  document.getElementById("roll-btn").textContent="サイコロを振って進む";
   document.getElementById("overlay").classList.remove("show");
   document.getElementById("dice").textContent="";
   document.getElementById("dice").classList.remove("rolling");
