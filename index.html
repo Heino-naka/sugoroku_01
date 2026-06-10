@@ -260,6 +260,12 @@
     background:var(--ink); color:#fff; border:none; border-radius:7px;
     padding:11px 18px; font-weight:700; cursor:pointer; font-family:inherit; font-size:.92rem;
   }
+  .result button:hover{ filter:brightness(1.12); }
+  .result .stats{ margin:2px 0 16px; padding:11px 13px; background:var(--paper); border:1px solid var(--line); border-radius:8px; font-size:.82rem; color:var(--ink); text-align:left; line-height:1.95; }
+  .result .stats b{ font-weight:800; font-variant-numeric:tabular-nums; }
+  .result .actions{ display:flex; flex-wrap:wrap; gap:8px; justify-content:center; }
+  .result .actions button{ flex:1 1 40%; min-width:120px; }
+  .result .btn-sub{ background:var(--paper-2); color:var(--ink); border:1px solid var(--line); }
 
   .site-foot{ max-width:960px; margin:14px auto 0; text-align:center; font-size:.78rem; color:var(--ink-soft); line-height:1.9; }
   .site-foot b{ color:var(--ink); }
@@ -365,7 +371,13 @@
     <div class="verdict" id="verdict"></div>
     <div class="rank" id="result-rank"></div>
     <div class="note" id="result-note"></div>
-    <button onclick="resetGame()">もう一度プレイ</button>
+    <div class="stats" id="result-stats"></div>
+    <div class="actions">
+      <button onclick="resetGame()">もう一度プレイ</button>
+      <button class="btn-sub" onclick="shareResult()">結果をシェア</button>
+      <button class="btn-sub" onclick="downloadRecords()">記録をDL</button>
+      <button class="btn-sub" onclick="downloadImage()">画像を保存</button>
+    </div>
   </div>
 </div>
 
@@ -409,11 +421,14 @@ const SQUARES = [
 const DICE_MAX = 6; // 1〜6 の標準ダイス。
 
 let pos=0, trust=100, mental=100, turn=0;
+let auditFired=false;
 let tasks=[];           // {sqIndex, text}
 let selected=null;
 let busy=false;
 let spinning=false, spinIv=null, pendingRoll=0;
 let hereNote="";
+let records=[];
+let lastResult=null;
 
 /* ── 描画：ボード ── */
 function renderBoard(){
@@ -497,21 +512,24 @@ function move(steps){
       if(sq.hit.mental) mental=clamp(mental-sq.hit.mental);
       log(`💢 理不尽発生：「${sq.name}」。`, "red");
     }else if(sq.type==="care"){
-      if(i===pos){ // 止まったときだけ回復
+      if(i===pos){ // 止まった＝満タン回復（ボーナス）
         let gained=0;
         if(sq.heal.mental){ const before=mental; mental=clamp(mental+sq.heal.mental); gained=mental-before; }
         hereNote=`メンタルが ${gained} 回復した！`;
-        log(`☕ 「${sq.name}」で止まれた。メンタルが ${gained} 回復。`, "grn");
-      }else{
-        log(`☕ 「${sq.name}」を素通り。休む間もなし…`, "red");
+        log(`☕ 「${sq.name}」で止まれた。メンタルが ${gained} 回復（満タン）。`, "grn");
+      }else{ // 通過＝一部回復（運に左右されすぎないように）
+        let gained=0;
+        if(sq.heal.mental){ const half=Math.round(sq.heal.mental/2); const before=mental; mental=clamp(mental+half); gained=mental-before; }
+        log(`☕ 「${sq.name}」のそばを通過。少し回復（メンタル +${gained}）。`, "grn");
       }
     }
   }
 
-  // 期間イベント：実地検査の予告
-  if(turn===4){
+  // 期間イベント：実地指導（位置で必ず一度発生＝速い出目で偶然回避できないように）
+  if(!auditFired && pos>=11){
+    auditFired=true;
     trust=clamp(trust-18);
-    log("🚨 行政から「実地指導」の通知。未処理があると大炎上します！", "red");
+    log("🚨 行政から「実地指導」。手続きの遅れが信頼度に響きます。", "red");
   }
 
   endTurn();      // ← 毎ターンのダメージは「ターン終了」で一度だけ
@@ -569,7 +587,8 @@ function checkInput(){
 function solveTask(){
   if(selected===null) return;
   const t=tasks[selected];
-  const len=document.getElementById("treat-input").value.trim().length;
+  const inputText=document.getElementById("treat-input").value.trim();
+  const len=inputText.length;
 
   let dTrust, dMental, quality;
   if(len>=50){ dTrust=12;  dMental=-12; quality="丁寧な記録"; }
@@ -578,6 +597,8 @@ function solveTask(){
 
   // （隠し）利用者に直接かかわる対応を丁寧にこなすと、消耗が和らぐ。画面には明示しない。
   if(t.userFacing && len>=50){ dMental += 10; }
+
+  records.push({ no:records.length+1, turn, task:t.text, quality, len, input:inputText });
 
   trust=clamp(trust+dTrust);
   mental=clamp(mental+dMental);
@@ -663,17 +684,97 @@ function log(msg, cls){
 
 /* ── リザルト画面 ── */
 function showResult(win, verdict, rank, note){
+  lastResult={win:!!win, verdict, rank, note};
   const ov=document.getElementById("overlay");
   document.getElementById("result").className = "result"+(win?" win":"");
   document.getElementById("verdict").textContent=verdict;
   document.getElementById("result-rank").textContent=rank;
   document.getElementById("result-note").textContent=note;
+  document.getElementById("result-stats").innerHTML =
+    `かかったターン数：<b>${turn}</b>　／　未処理タスク：<b>${tasks.length}</b>件<br>`+
+    `最終 信頼度：<b>${trust}</b>　／　メンタル：<b>${mental}</b><br>`+
+    `処理した記録：<b>${records.length}</b>件`;
   ov.classList.add("show");
+}
+
+/* ── 記録のダウンロード（入力内容の一覧をテキスト出力） ── */
+function downloadRecords(){
+  const v=lastResult||{};
+  let txt="障害児支援・理不尽すごろく（相談支援専門員編）\n";
+  txt+="プレイ記録　"+new Date().toLocaleString("ja-JP")+"\n";
+  txt+="判定："+(v.verdict||"-")+(v.rank?("／"+v.rank):"")+"\n";
+  txt+="ターン数 "+turn+" ／ 未処理 "+tasks.length+"件 ／ 信頼度 "+trust+" ／ メンタル "+mental+"\n";
+  txt+="==============================\n\n";
+  if(records.length===0){ txt+="（記録の入力はありませんでした）\n"; }
+  records.forEach(r=>{
+    txt+="■ 記録"+r.no+"（"+r.quality+"・"+r.len+"字）\n";
+    txt+="課題："+r.task+"\n";
+    txt+="内容：\n"+(r.input||"（白紙）")+"\n\n";
+  });
+  const blob=new Blob([txt],{type:"text/plain;charset=utf-8"});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement("a"); a.href=url; a.download="理不尽すごろく_記録.txt";
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
+/* ── 共有用テキスト・画像カード ── */
+function shareText(){
+  const v=lastResult||{};
+  return "障害児支援・理不尽すごろく（相談支援専門員編）\n判定："+(v.verdict||"")+"／"+(v.rank||"")+"\nターン"+turn+"・信頼度"+trust+"・メンタル"+mental+"で"+(v.win?"クリア":"リタイア")+"。\n#理不尽すごろく";
+}
+function makeShareImage(){
+  return new Promise(resolve=>{
+    const v=lastResult||{}; const W=1200,H=630;
+    const c=document.createElement("canvas"); c.width=W; c.height=H;
+    const x=c.getContext("2d");
+    x.fillStyle="#f3efe6"; x.fillRect(0,0,W,H);
+    x.strokeStyle="#cabfa9"; x.lineWidth=6; x.strokeRect(26,26,W-52,H-52);
+    x.textAlign="center";
+    x.fillStyle="#222a26"; x.font="bold 36px sans-serif";
+    x.fillText("障害児支援・理不尽すごろく", W/2, 120);
+    x.fillStyle="#5c6460"; x.font="24px sans-serif";
+    x.fillText("― 相談支援専門員編 ―", W/2, 162);
+    const seal=v.win?"#c2922a":"#cf3a2b";
+    x.save(); x.translate(W/2,300); x.rotate(-0.13);
+    x.font="bold 76px sans-serif"; x.fillStyle=seal; x.textAlign="center";
+    const vd=v.verdict||""; const w=x.measureText(vd).width;
+    x.lineWidth=8; x.strokeStyle=seal; x.strokeRect(-w/2-34,-74,w+68,118);
+    x.fillText(vd,0,16); x.restore();
+    x.fillStyle="#222a26"; x.font="bold 42px sans-serif";
+    x.fillText(v.rank||"", W/2, 442);
+    x.fillStyle="#5c6460"; x.font="28px sans-serif";
+    x.fillText("ターン "+turn+"　信頼度 "+trust+"　メンタル "+mental, W/2, 502);
+    x.fillStyle="#2c5f7c"; x.font="24px sans-serif";
+    x.fillText("#理不尽すごろく　by へいなか", W/2, 584);
+    c.toBlob(b=>resolve(b?new File([b],"rifujin-result.png",{type:"image/png"}):null),"image/png");
+  });
+}
+async function shareResult(){
+  const text=shareText(), url=location.href;
+  try{
+    const file=await makeShareImage();
+    if(file && navigator.canShare && navigator.canShare({files:[file]})){
+      await navigator.share({files:[file], text, title:"理不尽すごろく"}); return;
+    }
+  }catch(e){ if(e&&e.name==="AbortError") return; }
+  if(navigator.share){
+    try{ await navigator.share({text, url, title:"理不尽すごろく"}); return; }
+    catch(e){ if(e&&e.name==="AbortError") return; }
+  }
+  window.open("https://twitter.com/intent/tweet?text="+encodeURIComponent(text)+"&url="+encodeURIComponent(url),"_blank","noopener");
+}
+async function downloadImage(){
+  const f=await makeShareImage(); if(!f) return;
+  const url=URL.createObjectURL(f);
+  const a=document.createElement("a"); a.href=url; a.download="理不尽すごろく_結果.png";
+  document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(url);
 }
 
 /* ── リセット ── */
 function resetGame(){
   pos=0; trust=100; mental=100; turn=0; tasks=[]; selected=null; busy=false;
+  records=[]; lastResult=null; auditFired=false;
   if(spinIv){ clearInterval(spinIv); spinIv=null; } spinning=false; pendingRoll=0; hereNote="";
   document.getElementById("roll-btn").textContent="サイコロを振って進む";
   document.getElementById("overlay").classList.remove("show");
