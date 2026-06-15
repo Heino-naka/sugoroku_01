@@ -430,7 +430,8 @@
     <div class="actions">
       <button onclick="resetGame()">もう一度プレイ</button>
       <button class="btn-sub" onclick="shareResult()">結果をシェア</button>
-      <button class="btn-sub" onclick="downloadRecords()">対応ログをDL</button>
+      <button class="btn-sub" onclick="downloadRecords()">対応ログ（テキスト）</button>
+      <button class="btn-sub" onclick="downloadRecordsCSV()">対応ログ（Excel）</button>
       <button class="btn-sub" onclick="downloadImage()">画像を保存</button>
     </div>
   </div>
@@ -852,6 +853,29 @@ function downloadRecords(){
   const blob=new Blob([txt],{type:"text/plain;charset=utf-8"});
   const url=URL.createObjectURL(blob);
   const a=document.createElement("a"); a.href=url; a.download="理不尽すごろく_対応ログ.txt";
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
+/* ── 対応ログのダウンロード（Excelで開けるCSV／UTF-8 BOM付き） ── */
+function downloadRecordsCSV(){
+  const v=lastResult||{};
+  const q=s=>'"'+String(s==null?"":s).replace(/"/g,'""')+'"';   // CSVエスケープ（改行・カンマ・引用符に対応）
+  const rows=[];
+  rows.push(q("障害児支援・理不尽すごろく 対応ログ"));
+  rows.push([q("日時"), q(new Date().toLocaleString("ja-JP"))].join(","));
+  rows.push([q("判定"), q((v.verdict||"-")+(v.rank?("／"+v.rank):""))].join(","));
+  rows.push([q("最終"), q("信頼度 "+trust+" ／ メンタル "+mental+" ／ ターン "+turn)].join(","));
+  rows.push("");
+  rows.push(["番号","課題","品質","文字数","内容"].map(q).join(","));
+  if(records.length===0){ rows.push([q(""),q("（対応の入力はありませんでした）")].join(",")); }
+  records.forEach(r=>{
+    rows.push([q(r.no), q(r.task), q(r.quality), q(r.len), q(r.input||"")].join(","));
+  });
+  const csv="\uFEFF"+rows.join("\r\n");
+  const blob=new Blob([csv],{type:"text/csv;charset=utf-8"});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement("a"); a.href=url; a.download="理不尽すごろく_対応ログ.csv";
   document.body.appendChild(a); a.click(); document.body.removeChild(a);
   URL.revokeObjectURL(url);
 }
